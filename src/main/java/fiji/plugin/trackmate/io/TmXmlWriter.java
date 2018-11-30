@@ -24,6 +24,7 @@ import static fiji.plugin.trackmate.io.TmXmlKeys.FEATURE_ISINT_ATTRIBUTE;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FEATURE_NAME_ATTRIBUTE;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FEATURE_SHORT_NAME_ATTRIBUTE;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FILTERED_TRACK_ELEMENT_KEY;
+import static fiji.plugin.trackmate.io.TmXmlKeys.APPROVED_TRACK_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FILTER_ABOVE_ATTRIBUTE_NAME;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FILTER_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FILTER_FEATURE_ATTRIBUTE_NAME;
@@ -69,6 +70,7 @@ import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_FEATURES_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_FILTER_COLLECTION_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_ID_ELEMENT_KEY;
+import static fiji.plugin.trackmate.io.TmXmlKeys.APPROVED_TRACK_ID_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_NAME_ATTRIBUTE_NAME;
 import static fiji.plugin.trackmate.tracking.TrackerKeys.XML_ATTRIBUTE_TRACKER_NAME;
 
@@ -212,6 +214,9 @@ public class TmXmlWriter
 
 		final Element filteredTrackElement = echoFilteredTracks( model );
 		modelElement.addContent( filteredTrackElement );
+		
+		final Element approvedTrackElement = echoApprovedTracks( model );
+		modelElement.addContent( approvedTrackElement );
 
 		root.addContent( modelElement );
 	}
@@ -480,6 +485,20 @@ public class TmXmlWriter
 		}
 		logger.log( "  Added filtered tracks.\n" );
 		return filteredTracksElement;
+	}
+	
+	private Element echoApprovedTracks( final Model model )
+	{
+		final Element approvedTracksElement = new Element( APPROVED_TRACK_ELEMENT_KEY );
+		final Set< Integer > approvedTrackKeys = model.getTrackModel().approvedTrackIDs( false );
+		for ( final int trackID : approvedTrackKeys )
+		{
+			final Element trackIDElement = new Element( APPROVED_TRACK_ID_ELEMENT_KEY );
+			trackIDElement.setAttribute( TrackIndexAnalyzer.TRACK_ID, "" + trackID );
+			approvedTracksElement.addContent( trackIDElement );
+		}
+		logger.log( "  Added approved tracks.\n" );
+		return approvedTracksElement;
 	}
 
 	protected Element echoImageInfo( final Settings settings )

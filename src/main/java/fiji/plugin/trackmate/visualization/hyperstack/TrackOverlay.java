@@ -104,6 +104,8 @@ public class TrackOverlay extends Roi
 		final int trackDisplayMode = ( Integer ) displaySettings.get( TrackMateModelView.KEY_TRACK_DISPLAY_MODE );
 		final int trackDisplayDepth = ( Integer ) displaySettings.get( TrackMateModelView.KEY_TRACK_DISPLAY_DEPTH );
 		final Set< Integer > filteredTrackKeys = model.getTrackModel().unsortedTrackIDs( true );
+		final Set< Integer > approvedTrackKeys = model.getTrackModel().approvedTrackIDs(false);
+		final Set< Integer > nonApprovedTrackKeys = model.getTrackModel().nonApprovedTrackIDs(false);
 
 		g2d.setStroke( NORMAL_STROKE );
 		if ( trackDisplayMode == TrackMateModelView.TRACK_DISPLAY_MODE_LOCAL || trackDisplayMode == TrackMateModelView.TRACK_DISPLAY_MODE_LOCAL_QUICK )
@@ -170,6 +172,62 @@ public class TrackOverlay extends Roi
 		case TrackMateModelView.TRACK_DISPLAY_MODE_WHOLE:
 		{
 			for ( final Integer trackID : filteredTrackKeys )
+			{
+				colorGenerator.setCurrentTrackID( trackID );
+				Set< DefaultWeightedEdge > track;
+				synchronized ( model )
+				{
+					track = new HashSet< >( model.getTrackModel().trackEdges( trackID ) );
+				}
+				for ( final DefaultWeightedEdge edge : track )
+				{
+					source = model.getTrackModel().getEdgeSource( edge );
+					target = model.getTrackModel().getEdgeTarget( edge );
+					if ( !isOnClip( source, target, minx, miny, maxx, maxy, calibration ) )
+						continue;
+
+					final double zs = source.getFeature( Spot.POSITION_Z ).doubleValue();
+					final double zt = target.getFeature( Spot.POSITION_Z ).doubleValue();
+					if ( doLimitDrawingDepth && Math.abs( zs - zslice ) > drawingDepth && Math.abs( zt - zslice ) > drawingDepth )
+						continue;
+
+					g2d.setColor( colorGenerator.color( edge ) );
+					drawEdge( g2d, source, target, xcorner, ycorner, magnification );
+				}
+			}
+			break;
+		}
+		case TrackMateModelView.TRACK_DISPLAY_MODE_APPROVED_ONLY:
+		{
+			for ( final Integer trackID : approvedTrackKeys )
+			{
+				colorGenerator.setCurrentTrackID( trackID );
+				Set< DefaultWeightedEdge > track;
+				synchronized ( model )
+				{
+					track = new HashSet< >( model.getTrackModel().trackEdges( trackID ) );
+				}
+				for ( final DefaultWeightedEdge edge : track )
+				{
+					source = model.getTrackModel().getEdgeSource( edge );
+					target = model.getTrackModel().getEdgeTarget( edge );
+					if ( !isOnClip( source, target, minx, miny, maxx, maxy, calibration ) )
+						continue;
+
+					final double zs = source.getFeature( Spot.POSITION_Z ).doubleValue();
+					final double zt = target.getFeature( Spot.POSITION_Z ).doubleValue();
+					if ( doLimitDrawingDepth && Math.abs( zs - zslice ) > drawingDepth && Math.abs( zt - zslice ) > drawingDepth )
+						continue;
+
+					g2d.setColor( colorGenerator.color( edge ) );
+					drawEdge( g2d, source, target, xcorner, ycorner, magnification );
+				}
+			}
+			break;
+		}
+		case TrackMateModelView.TRACK_DISPLAY_MODE_NON_APPROVED_ONLY:
+		{
+			for ( final Integer trackID : nonApprovedTrackKeys )
 			{
 				colorGenerator.setCurrentTrackID( trackID );
 				Set< DefaultWeightedEdge > track;

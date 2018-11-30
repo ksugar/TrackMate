@@ -35,7 +35,9 @@ public interface TrackMateModelView
 	 * {@link #TRACK_DISPLAY_MODE_WHOLE}, {@link #TRACK_DISPLAY_MODE_LOCAL},
 	 * {@link #TRACK_DISPLAY_MODE_LOCAL_BACKWARD},
 	 * {@value #TRACK_DISPLAY_MODE_LOCAL_FORWARD},
-	 * {@value #TRACK_DISPLAY_MODE_SELECTION_ONLY}.
+	 * {@value #TRACK_DISPLAY_MODE_SELECTION_ONLY},
+	 * {@value #TRACK_DISPLAY_MODE_APPROVED_ONLY},
+	 * {@value #TRACK_DISPLAY_MODE_NON_APPROVED_ONLY}.
 	 */
 	public static final String KEY_TRACK_DISPLAY_MODE = "TrackDisplaymode";
 
@@ -160,6 +162,18 @@ public interface TrackMateModelView
 	 * displayed.
 	 */
 	public static final int TRACK_DISPLAY_MODE_SELECTION_ONLY = 7;
+	
+	/**
+	 * Track display mode where only the approved tracks are drawn, ignoring the value
+	 * of {@link #KEY_TRACK_DISPLAY_DEPTH}..
+	 */
+	public static final int TRACK_DISPLAY_MODE_APPROVED_ONLY = 8;
+
+	/**
+	 * Track display mode where only the approved tracks are drawn, ignoring the value
+	 * of {@link #KEY_TRACK_DISPLAY_DEPTH}..
+	 */
+	public static final int TRACK_DISPLAY_MODE_NON_APPROVED_ONLY = 9;
 
 	/*
 	 * DESCRIPTIONS
@@ -176,7 +190,9 @@ public interface TrackMateModelView
 			"Local tracks (fast)",
 			"Local tracks, backward (fast)",
 			"Local tracks, forward (fast)",
-			"Show selection only"
+			"Show selection only",
+			"Show approved only",
+			"Show non-approved only"
 	};
 
 	/*

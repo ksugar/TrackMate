@@ -126,6 +126,13 @@ public class TmXmlKeys {
 
 	public static final String FILTERED_TRACK_ELEMENT_KEY 				= "FilteredTracks";
 	public static final String TRACK_ID_ELEMENT_KEY 					= "TrackID";
+	
+	/*
+	 * TRACK APPROVED elements
+	 */
+
+	public static final String APPROVED_TRACK_ELEMENT_KEY 				= "ApprovedTracks";
+	public static final String APPROVED_TRACK_ID_ELEMENT_KEY 			= "TrackID";
 
 	/*
 	 * FEATURES elements

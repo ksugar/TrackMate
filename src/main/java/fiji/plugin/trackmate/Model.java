@@ -724,6 +724,53 @@ public class Model
 		}
 		return oldvis;
 	}
+	
+	/**
+	 * Get the approved state of the specified track. Throws a
+	 * {@link NullPointerException} if the track ID is unknown to the model.
+	 * <p>
+	 *
+	 * @param trackID
+	 *            the track ID.
+	 * @return the specified track approved state.
+	 */
+	public synchronized boolean getTrackApprovedState( final Integer trackID )
+	{
+		return trackModel.getApproved( trackID );
+	}
+	
+	/**
+	 * Sets the approved state of the specified track. Throws a
+	 * {@link NullPointerException} if the track ID is unknown to the model.
+	 * <p>
+	 * For the model update to happen correctly and listeners to be notified
+	 * properly, a call to this method must happen within a transaction, as in:
+	 *
+	 * <pre>
+	 * model.beginUpdate();
+	 * try {
+	 * 	... // model modifications here
+	 * } finally {
+	 * 	model.endUpdate();
+	 * }
+	 * </pre>
+	 *
+	 * @param trackID
+	 *            the track ID.
+	 * @param approved
+	 *            the desired approved state.
+	 * @return the specified track visibility prior to calling this method.
+	 */
+	public synchronized boolean setTrackApprovedState( final Integer trackID, final boolean approved )
+	{
+		final boolean oldapp = trackModel.setApproved( trackID, approved );
+		final boolean modified = oldapp != approved;
+		if ( modified )
+		{
+			eventCache.add( ModelChangeEvent.TRACKS_APPROVED_STATE_CHANGED );
+		}
+		return oldapp;
+	}
 
 	/*
 	 * PRIVATE METHODS

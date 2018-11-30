@@ -27,6 +27,7 @@ import static fiji.plugin.trackmate.io.TmXmlKeys.FEATURE_ISINT_ATTRIBUTE;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FEATURE_NAME_ATTRIBUTE;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FEATURE_SHORT_NAME_ATTRIBUTE;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FILTERED_TRACK_ELEMENT_KEY;
+import static fiji.plugin.trackmate.io.TmXmlKeys.APPROVED_TRACK_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FILTER_ABOVE_ATTRIBUTE_NAME;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FILTER_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.FILTER_FEATURE_ATTRIBUTE_NAME;
@@ -71,6 +72,7 @@ import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_FEATURES_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_FILTER_COLLECTION_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_ID_ELEMENT_KEY;
+import static fiji.plugin.trackmate.io.TmXmlKeys.APPROVED_TRACK_ID_ELEMENT_KEY;
 import static fiji.plugin.trackmate.io.TmXmlKeys.TRACK_NAME_ATTRIBUTE_NAME;
 import static fiji.plugin.trackmate.tracking.TrackerKeys.XML_ATTRIBUTE_TRACKER_NAME;
 
@@ -991,20 +993,33 @@ public class TmXmlReader
 		final Set< Integer > savedFilteredTrackIDs = readFilteredTrackIDs( modelElement );
 		final Map< Integer, Boolean > visibility = new HashMap< >( connectedEdgeSet.size() );
 		final Set< Integer > ids = new HashSet< >( connectedEdgeSet.keySet() );
+		for ( final Integer id : ids )
+		{
+			visibility.put( id, Boolean.FALSE );
+		}
 		for ( final Integer id : savedFilteredTrackIDs )
 		{
 			visibility.put( id, Boolean.TRUE );
 		}
-		ids.removeAll( savedFilteredTrackIDs );
+		
+		/*
+		 * Now on to the approved states.
+		 */
+		final Set< Integer > savedApprovedTrackIDs = readApprovedTrackIDs( modelElement );
+		final Map< Integer, Boolean > approvedStates = new HashMap< >( connectedEdgeSet.size() );
 		for ( final Integer id : ids )
 		{
-			visibility.put( id, Boolean.FALSE );
+			approvedStates.put( id, Boolean.FALSE );
+		}
+		for ( final Integer id : savedApprovedTrackIDs )
+		{
+			approvedStates.put( id, Boolean.TRUE );
 		}
 
 		/*
 		 * Pass read results to model.
 		 */
-		model.getTrackModel().from( graph, connectedVertexSet, connectedEdgeSet, visibility, savedTrackNames );
+		model.getTrackModel().from( graph, connectedVertexSet, connectedEdgeSet, visibility, approvedStates, savedTrackNames );
 
 		return true;
 	}
@@ -1064,6 +1079,61 @@ public class TmXmlReader
 			}
 		}
 		return filteredTrackIndices;
+	}
+	
+	/**
+	 * Reads and returns the list of track indices that define the approved track
+	 * collection.
+	 */
+	private Set< Integer > readApprovedTrackIDs( final Element modelElement )
+	{
+		final Element approvedTracksElement = modelElement.getChild( APPROVED_TRACK_ELEMENT_KEY );
+		if ( null == approvedTracksElement )
+		{
+			return new HashSet< >();
+		}
+		
+		// We double-check that all trackID in the filtered list exist in the
+		// track list
+		// First, prepare a sorted array of all track IDs
+		final Element allTracksElement = modelElement.getChild( TRACK_COLLECTION_ELEMENT_KEY );
+		if ( null == allTracksElement )
+		{
+			logger.error( "Could not find the track collection in file.\n" );
+			ok = false;
+			return null;
+		}
+
+		final List< Element > trackElements = allTracksElement.getChildren( TRACK_ELEMENT_KEY );
+		final int[] IDs = new int[ trackElements.size() ];
+		int index = 0;
+		for ( final Element trackElement : trackElements )
+		{
+			final int trackID = readIntAttribute( trackElement, TrackIndexAnalyzer.TRACK_ID, logger );
+			IDs[ index ] = trackID;
+			index++;
+		}
+		Arrays.sort( IDs );
+
+		final List< Element > elements = approvedTracksElement.getChildren( APPROVED_TRACK_ID_ELEMENT_KEY );
+		final HashSet< Integer > approvedTrackIndices = new HashSet< >( elements.size() );
+		for ( final Element indexElement : elements )
+		{
+			final int trackID = readIntAttribute( indexElement, TrackIndexAnalyzer.TRACK_ID, logger );
+
+			// Check if this one exist in the list
+			final int search = Arrays.binarySearch( IDs, trackID );
+			if ( search < 0 )
+			{
+				logger.error( "Invalid approved track index: " + trackID + ". Track ID does not exist.\n" );
+				ok = false;
+			}
+			else
+			{
+				approvedTrackIndices.add( trackID );
+			}
+		}
+		return approvedTrackIndices;
 	}
 
 	private Spot createSpotFrom( final Element spotEl )

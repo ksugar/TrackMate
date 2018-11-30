@@ -102,6 +102,7 @@ public class TrackModel
 	final Set< Integer > tracksUpdated = new HashSet< >();
 
 	private static final Boolean DEFAULT_VISIBILITY = Boolean.TRUE;
+	private static final Boolean DEFAULT_APPROVED_STATE = Boolean.FALSE;
 
 	// ~ Instance fields
 	// --------------------------------------------------------
@@ -117,6 +118,8 @@ public class TrackModel
 	Map< Spot, Integer > vertexToID;
 
 	private Map< Integer, Boolean > visibility;
+	
+	private Map< Integer, Boolean > approvedStates;
 
 	private Map< Integer, String > names;
 
@@ -168,6 +171,41 @@ public class TrackModel
 	{
 		setGraph( new SimpleWeightedGraph< Spot, DefaultWeightedEdge >( DefaultWeightedEdge.class ) );
 	}
+	
+	/**
+	 * This method is meant to help building a model from a serialized source,
+	 * such as a saved file. It allows specifying the exact mapping of track IDs
+	 * to the connected sets. The model content is completely replaced by the
+	 * specified parameters, including the global graph, its connected
+	 * components (both in spots and edges), visibility and naming.
+	 * This method supports older versions of TmXmlReader that does not contain
+	 * ApprovedTracks tag. 
+	 * <p>
+	 * It is the caller responsibility to ensure that the graph and provided
+	 * component are coherent. Unexpected behavior might result otherwise.
+	 *
+	 * @param lGraph
+	 *            the mother graph for the model.
+	 * @param trackSpots
+	 *            the mapping of track IDs vs the connected components as sets
+	 *            of spots.
+	 * @param trackEdges
+	 *            the mapping of track IDs vs the connected components as sets
+	 *            of edges.
+	 * @param trackVisibility
+	 *            the track visibility.
+	 * @param trackNames
+	 *            the track names.
+	 */
+	public void from( final SimpleWeightedGraph< Spot, DefaultWeightedEdge > lGraph, final Map< Integer, Set< Spot > > trackSpots, final Map< Integer, Set< DefaultWeightedEdge > > trackEdges, final Map< Integer, Boolean > trackVisibility, final Map< Integer, String > trackNames )
+	{
+		final Map< Integer, Boolean > trackApprovedStates = new HashMap< >( trackVisibility.size() );
+		for ( final Integer id : trackVisibility.keySet() )
+		{
+			trackApprovedStates.put( id, DEFAULT_APPROVED_STATE );
+		}
+		from(lGraph, trackSpots, trackEdges, trackVisibility, trackApprovedStates, trackNames);
+	}
 
 	/**
 	 * This method is meant to help building a model from a serialized source,
@@ -189,10 +227,12 @@ public class TrackModel
 	 *            of edges.
 	 * @param trackVisibility
 	 *            the track visibility.
+	 * @param trackApprovedStates
+	 *            the track approved states.
 	 * @param trackNames
 	 *            the track names.
 	 */
-	public void from( final SimpleWeightedGraph< Spot, DefaultWeightedEdge > lGraph, final Map< Integer, Set< Spot > > trackSpots, final Map< Integer, Set< DefaultWeightedEdge > > trackEdges, final Map< Integer, Boolean > trackVisibility, final Map< Integer, String > trackNames )
+	public void from( final SimpleWeightedGraph< Spot, DefaultWeightedEdge > lGraph, final Map< Integer, Set< Spot > > trackSpots, final Map< Integer, Set< DefaultWeightedEdge > > trackEdges, final Map< Integer, Boolean > trackVisibility, final Map< Integer, Boolean > trackApprovedStates, final Map< Integer, String > trackNames )
 	{
 
 		if ( null != this.graph )
@@ -208,6 +248,7 @@ public class TrackModel
 		tracksUpdated.clear();
 
 		visibility = trackVisibility;
+		approvedStates = trackApprovedStates;
 		names = trackNames;
 		connectedVertexSets = trackSpots;
 		connectedEdgeSets = trackEdges;
@@ -301,6 +342,16 @@ public class TrackModel
 	Boolean setVisibility( final Integer trackID, final boolean visible )
 	{
 		return visibility.put( trackID, Boolean.valueOf( visible ) );
+	}
+	
+	Boolean getApproved( final Integer trackID )
+	{
+		return approvedStates.get( trackID );
+	}
+	
+	Boolean setApproved( final Integer trackID, final boolean approved )
+	{
+		return approvedStates.put( trackID, Boolean.valueOf( approved ) );
 	}
 
 	/*
@@ -520,11 +571,77 @@ public class TrackModel
 			return ids;
 
 		final Set< Integer > vids = new LinkedHashSet< >( ids.size() );
+		Boolean visible;
 		for ( final Integer id : ids )
-			if ( visibility.get( id ) )
+		{
+			visible = visibility.get( id );
+			if ( visible != null && visible )
 				vids.add( id );
+		}
 
 		return vids;
+	}	
+	
+	/**
+	 * Returns the set of approved track IDs managed by this model, ordered by track
+	 * names (alpha-numerically sorted).
+	 *
+	 * @param visibleOnly
+	 *            if <code>true</code>, only visible track IDs will be returned.
+	 * @return the set of approved track IDs.
+	 */
+	public Set< Integer > approvedTrackIDs( final boolean visibleOnly )
+	{
+		final Set< Integer > ids = TMUtils.sortByValue( names, AlphanumComparator.instance ).keySet();
+		final Set< Integer > apids = new LinkedHashSet< >( ids.size() );
+		Boolean isApproved;
+		for ( final Integer id : ids )
+		{
+			isApproved = approvedStates.get( id );
+			if ( isApproved != null && isApproved )
+				apids.add( id );
+		}
+			
+		if ( !visibleOnly )
+			return apids;
+
+		final Set< Integer > vapids = new LinkedHashSet< >( apids.size() );
+		for ( final Integer id : ids )
+			if ( visibility.get( id ) )
+				vapids.add( id );
+
+		return vapids;
+	}
+
+	/**
+	 * Returns the set of approved track IDs managed by this model, ordered by track
+	 * names (alpha-numerically sorted).
+	 *
+	 * @param visibleOnly
+	 *            if <code>true</code>, only visible track IDs will be returned.
+	 * @return the set of approved track IDs.
+	 */
+	public Set< Integer > nonApprovedTrackIDs( final boolean visibleOnly )
+	{
+		final Set< Integer > ids = TMUtils.sortByValue( names, AlphanumComparator.instance ).keySet();
+		final Set< Integer > napids = new LinkedHashSet< >( ids.size() );
+		Boolean isApproved;
+		for ( final Integer id : ids )
+		{
+			isApproved = approvedStates.get( id );
+			if ( isApproved != null && !isApproved )
+				napids.add( id );
+		}
+
+		if ( !visibleOnly )
+			return napids;
+
+		final Set< Integer > vapids = new LinkedHashSet< >( napids.size() );
+		for ( final Integer id : ids )
+			if ( visibility.get( id ) )
+				vapids.add( id );
+
+		return vapids;
 	}
 
 	/**
@@ -639,6 +756,26 @@ public class TrackModel
 	{
 		return vertexToID.get( spot );
 	}
+	
+	/**
+	 * Returns the track ID of the specified name belong to, or <code>null</code>
+	 * if the specified name cannot be found in this model.
+	 * 
+	 * @param name
+	 *            the name to search for.
+	 *
+	 * @return the track ID it belongs to.
+	 */
+	public Integer trackIDOf( final String name )
+	{
+		int trackID = -1;
+		Iterator<Integer> it = trackIDs(false).iterator();
+		while (it.hasNext()) {
+			trackID = it.next();
+			if (name(trackID).equals(name)) break;
+		}
+		return trackID != -1 ? trackID : null;
+	}
 
 	/*
 	 * PRIVATE METHODS
@@ -657,6 +794,7 @@ public class TrackModel
 		edgeToID = new HashMap< >();
 		IDcounter = 0;
 		visibility = new HashMap< >();
+		approvedStates = new HashMap< >();
 		names = new HashMap< >();
 		connectedVertexSets = new HashMap< >();
 		connectedEdgeSets = new HashMap< >();
@@ -842,6 +980,7 @@ public class TrackModel
 			connectedVertexSets.put( ID, currentConnectedVertexSet );
 			connectedEdgeSets.put( ID, currentConnectedEdgeSet );
 			visibility.put( ID, DEFAULT_VISIBILITY );
+			approvedStates.put( ID, DEFAULT_APPROVED_STATE );
 			names.put( ID, nameGenerator.next() );
 		}
 
@@ -947,6 +1086,7 @@ public class TrackModel
 					connectedVertexSets.remove( id );
 					names.remove( id );
 					visibility.remove( id );
+					approvedStates.remove( id );
 				}
 			}
 		}
@@ -1050,9 +1190,19 @@ public class TrackModel
 
 					// Visibility: if at least one is visible, the new set is
 					// made visible.
-					final Boolean targetVisibility = visibility.get( sid ) || visibility.get( tid );
+					final Boolean targetVisibility =
+							visibility.get( sid ) != null ? visibility.get( sid ) : false ||
+							visibility.get( tid ) != null ? visibility.get( tid ) : false ;
 					visibility.put( nid, targetVisibility );
 					visibility.remove( rid );
+					
+					// Approved State: if at least one is approved, the new set is
+					// made approved.
+					final Boolean targetApprovedState =
+							approvedStates.get( sid ) != null ? approvedStates.get( sid ) : false ||
+							approvedStates.get( tid ) != null ? approvedStates.get( tid ) : false ;
+					approvedStates.put( nid, targetApprovedState );
+					approvedStates.remove( rid );
 
 					// Name: the new set gets the name of the largest one.
 					names.remove( rid ); // 'nid' already has the right name.
@@ -1079,6 +1229,8 @@ public class TrackModel
 
 				// Give it visibility
 				visibility.put( nid, Boolean.TRUE );
+				// Give it approved states
+				approvedStates.put( nid, Boolean.FALSE );
 				// and a default name.
 				names.put( nid, nameGenerator.next() );
 				// Transaction: we mark the new track as updated
@@ -1148,6 +1300,7 @@ public class TrackModel
 				connectedEdgeSets.remove( id );
 				names.remove( id );
 				visibility.remove( id );
+				approvedStates.remove( id );
 				/* We need to remove also the vertices */
 				final Set< Spot > vertexSet = connectedVertexSets.get( id );
 				// Forget the vertices were in a set
@@ -1245,8 +1398,10 @@ public class TrackModel
 						{
 							vertexToID.put( tv, newid );
 						}
-						final Boolean targetVisibility = visibility.get( id );
+						final Boolean targetVisibility = visibility.get( id ) != null ? visibility.get( id ) : false;
 						visibility.put( newid, targetVisibility );
+						final Boolean targetApprvedState = approvedStates.get( id ) != null ? approvedStates.get( id ) : false;
+						approvedStates.put( newid, targetApprvedState );
 						names.put( newid, nameGenerator.next() );
 						// Transaction: both children tracks are marked for
 						// update.
@@ -1289,8 +1444,10 @@ public class TrackModel
 							{
 								vertexToID.put( v, newid );
 							}
-							final Boolean targetVisibility = visibility.get( id );
+							final Boolean targetVisibility = visibility.get( id ) != null ? visibility.get( id ) : false;
 							visibility.put( newid, targetVisibility );
+							final Boolean targetApprvedState = approvedStates.get( id ) != null ? approvedStates.get( id ) : false;
+							approvedStates.put( newid, targetApprvedState );
 							names.put( newid, nameGenerator.next() );
 							// Transaction: both children tracks are marked for
 							// update.
@@ -1316,6 +1473,7 @@ public class TrackModel
 						connectedVertexSets.remove( id );
 						names.remove( id );
 						visibility.remove( id );
+						approvedStates.remove( id );
 						tracksUpdated.remove( id );
 					}
 

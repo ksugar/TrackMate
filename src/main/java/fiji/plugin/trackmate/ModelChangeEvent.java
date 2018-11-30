@@ -79,6 +79,11 @@ public class ModelChangeEvent extends EventObject {
 	 * .
 	 */
 	public static final int 	MODEL_MODIFIED = 8;
+	/**
+	 * Event type indicating that the tracks of the model had their
+	 * approved state changed.
+	 */
+	public static final int 	TRACKS_APPROVED_STATE_CHANGED = 9;
 
 	/** Spots affected by this event. */
 	private final HashSet<Spot> spots = new HashSet<>();
@@ -216,6 +221,9 @@ public class ModelChangeEvent extends EventObject {
 			break;
 		case TRACKS_VISIBILITY_CHANGED:
 			str.append("Track visibility changed\n");
+			break;
+		case TRACKS_APPROVED_STATE_CHANGED:
+			str.append("Track approved state changed\n");
 			break;
 		case MODEL_MODIFIED:
 			str.append("Model modified, with:\n");
